@@ -1,6 +1,7 @@
 // File: app/src/main/java/com/rahul/auric/auricfit/ui/navigation/AppNavigation.kt
 package com.rahul.auric.auricfit.ui.navigation
 
+import android.Manifest
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
@@ -20,6 +21,10 @@ import com.rahul.auric.auricfit.ui.screens.profile.ProfileScreen
 import com.rahul.auric.auricfit.ui.screens.profile.viewmodel.ProfileViewModel
 import com.rahul.auric.auricfit.ui.screens.splash.SplashScreen
 import com.rahul.auric.auricfit.util.PermissionHandler
+import android.content.Intent
+import android.os.Build
+import androidx.compose.ui.platform.LocalContext
+import com.rahul.auric.auricfit.sensor.StepCounterService
 
 object Routes {
     const val SPLASH = "splash"
@@ -74,23 +79,52 @@ fun AppNavigation() {
                 )
             }
             composable(Routes.HOME) {
-                // (This part remains the same)
-                PermissionHandler(onGranted = {
-                    val homeViewModel: HomeViewModel = viewModel(
-                        factory = HomeViewModel.Factory(
-                            Graph.userProfileRepository,
-                            Graph.stepDataRepository
+                val context = LocalContext.current
+
+                // --- THIS IS THE KEY CHANGE ---
+                // Create a list of permissions needed for this screen.
+                val permissionsToRequest = mutableListOf<String>()
+                // Activity Recognition is needed on Android 10+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
+                }
+                // Post Notifications is needed on Android 13+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+
+                // Pass the list to our handler
+                PermissionHandler(
+                    permissions = permissionsToRequest,
+                    onGranted = {
+                        val homeViewModel: HomeViewModel = viewModel(
+                            factory = HomeViewModel.Factory(
+                                userProfileRepository = Graph.userProfileRepository,
+                                stepDataRepository = Graph.stepDataRepository
+                            )
                         )
-                    )
-                    val uiState by homeViewModel.uiState.collectAsState()
-                    LaunchedEffect(Unit) { homeViewModel.startStepCounting() }
-                    HomeScreen(
-                        steps = uiState.steps,
-                        distanceKm = uiState.distanceKm,
-                        caloriesKcal = uiState.caloriesKcal,
-                        goal = uiState.goal
-                    )
-                })
+                        val uiState by homeViewModel.uiState.collectAsState()
+
+                        LaunchedEffect(Unit) {
+                            val intent = Intent(context, StepCounterService::class.java).apply {
+                                action = StepCounterService.ACTION_START
+                            }
+                            // On modern Android, we must use startForegroundService
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                context.startForegroundService(intent)
+                            } else {
+                                context.startService(intent)
+                            }
+                        }
+
+                        HomeScreen(
+                            steps = uiState.steps,
+                            distanceKm = uiState.distanceKm,
+                            caloriesKcal = uiState.caloriesKcal,
+                            goal = uiState.goal
+                        )
+                    }
+                )
             }
             composable(Routes.HISTORY) {
                 val historyViewModel: HistoryViewModel = viewModel(

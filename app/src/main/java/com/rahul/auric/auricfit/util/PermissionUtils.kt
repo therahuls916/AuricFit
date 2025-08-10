@@ -1,8 +1,7 @@
 // File: app/src/main/java/com/rahul/auric/auricfit/util/PermissionUtils.kt
 package com.rahul.auric.auricfit.util
 
-import android.Manifest
-import android.os.Build
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -13,9 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionState
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.MultiplePermissionsState
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 /**
  * A wrapper composable that handles the ACTIVITY_RECOGNITION permission flow.
@@ -24,51 +22,51 @@ import com.google.accompanist.permissions.rememberPermissionState
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun PermissionHandler(
+    permissions: List<String>, // Now accepts a list of permissions
     onGranted: @Composable () -> Unit,
 ) {
-    // ACTIVITY_RECOGNITION is only required on Android 10 (Q) and above.
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+    // If the list is empty (for older Android versions), grant immediately.
+    if (permissions.isEmpty()) {
         onGranted()
         return
     }
 
-    val permissionState = rememberPermissionState(
-        permission = Manifest.permission.ACTIVITY_RECOGNITION
-    )
+    val permissionStates = rememberMultiplePermissionsState(permissions = permissions)
 
-    if (permissionState.status.isGranted) {
+    if (permissionStates.allPermissionsGranted) {
         onGranted()
     } else {
-        PermissionRequestScreen(permissionState)
+        // Pass the states to the request screen
+        PermissionRequestScreen(permissionStates)
     }
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-private fun PermissionRequestScreen(permissionState: PermissionState) {
+private fun PermissionRequestScreen(permissionStates: MultiplePermissionsState) { // Updated parameter
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Permission Required",
+            text = "Permissions Required",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = "AuricFit needs permission to access your physical activity to count your steps and provide accurate fitness insights.",
+            text = "AuricFit needs the following permissions to function correctly:\n\n• Physical Activity (to count steps)\n• Notifications (to show tracking status)",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(32.dp))
         Button(
-            onClick = { permissionState.launchPermissionRequest() },
+            onClick = { permissionStates.launchMultiplePermissionRequest() }, // Use the multiple request launcher
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Grant Permission")
+            Text("Grant Permissions")
         }
     }
 }
