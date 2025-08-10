@@ -33,12 +33,14 @@ import com.rahul.auric.auricfit.ui.theme.TextGray
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    steps: Int,
-    distanceKm: Double,
-    caloriesKcal: Double,
+    // Parameters are now nullable to match the UI State
+    steps: Int?,
+    distanceKm: Double?,
+    caloriesKcal: Double?,
     goal: Int
 ) {
-    val progress = if (goal > 0) steps.toFloat() / goal.toFloat() else 0f
+    // Safely calculate progress, defaulting to 0f if steps are null
+    val progress = if (goal > 0 && steps != null) (steps.toFloat() / goal.toFloat()) else 0f
 
     Scaffold(
         topBar = {
@@ -55,14 +57,16 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
+        // FIX 1: Apply the paddingValues from the Scaffold to the main Column
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues) // This uses the padding
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp) // Ensures consistent spacing between items
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // FIX 2: Pass the nullable 'steps' value down
             StepsHero(steps = steps, goal = goal, progress = progress)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -71,14 +75,16 @@ fun HomeScreen(
                 MetricCard(
                     icon = Icons.Default.DirectionsRun,
                     label = "Distance",
-                    value = "%.1f".format(distanceKm),
+                    // Safely display "--" if value is null
+                    value = if (distanceKm != null) "%.1f".format(distanceKm) else "--",
                     unit = "km",
                     modifier = Modifier.weight(1f)
                 )
                 MetricCard(
                     icon = Icons.Default.LocalFireDepartment,
                     label = "Calories",
-                    value = "%.0f".format(caloriesKcal),
+                    // Safely display "--" if value is null
+                    value = if (caloriesKcal != null) "%.0f".format(caloriesKcal) else "--",
                     unit = "kcal",
                     modifier = Modifier.weight(1f)
                 )
@@ -88,32 +94,30 @@ fun HomeScreen(
 }
 
 @Composable
-fun StepsHero(steps: Int, goal: Int, progress: Float) {
+fun StepsHero(steps: Int?, goal: Int, progress: Float) { // FIX 3: Accept nullable Int? for steps
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight(), // The card will size itself to its content
+            .wrapContentHeight(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = PrimaryGreen.copy(alpha = 0.1f)
         )
     ) {
-        // This Box will center everything inside it
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 28.dp, horizontal = 16.dp),
-            contentAlignment = Alignment.Center // THIS IS THE KEY CHANGE
+                .padding(vertical = 24.dp, horizontal = 16.dp),
+            contentAlignment = Alignment.Center
         ) {
             Column(
-                // All items inside this column will be horizontally centered
                 horizontalAlignment = Alignment.CenterHorizontally,
-                // Consistent vertical spacing between items
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = String.format("%,d", steps),
-                    fontSize = 52.sp,
+                    // Safely display "--" if steps are null
+                    text = if (steps != null) String.format("%,d", steps) else "--",
+                    fontSize = 56.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -122,7 +126,6 @@ fun StepsHero(steps: Int, goal: Int, progress: Float) {
                     style = MaterialTheme.typography.titleMedium,
                     color = TextGray
                 )
-                // Spacer is now handled by the Arrangement, so we can adjust it
                 Spacer(modifier = Modifier.height(8.dp))
                 CircularProgressRing(
                     progress = progress,
@@ -138,6 +141,9 @@ fun StepsHero(steps: Int, goal: Int, progress: Float) {
         }
     }
 }
+
+// CircularProgressRing and MetricCard functions do not need to be changed.
+// Re-pasting them here for completeness.
 
 @Composable
 fun CircularProgressRing(
@@ -200,10 +206,8 @@ fun MetricCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            // Use Arrangement.spacedBy for consistent spacing within the column
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // First Row for Icon and Label
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = icon,
@@ -214,21 +218,16 @@ fun MetricCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.bodyMedium, // Changed for better fit
+                    style = MaterialTheme.typography.bodyMedium,
                     color = TextGray
                 )
             }
-
-            // Second Row for Value and Unit, with baseline alignment
             Row(
-                // This ensures the "km" aligns with the bottom of the "6.2"
                 verticalAlignment = Alignment.Bottom,
-                // Add a spacer to push the unit to the end if needed,
-                // but baseline alignment is often enough.
             ) {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.headlineMedium, // Adjusted size
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -236,13 +235,13 @@ fun MetricCard(
                     text = unit,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextGray,
-                    // Padding to lift the unit slightly for perfect visual alignment
                     modifier = Modifier.padding(bottom = 2.dp)
                 )
             }
         }
     }
 }
+
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable

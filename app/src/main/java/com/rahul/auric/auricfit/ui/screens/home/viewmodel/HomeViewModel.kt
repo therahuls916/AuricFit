@@ -18,11 +18,12 @@ import kotlinx.coroutines.launch
  * This makes it easy to manage and update the UI from a single state object.
  */
 data class HomeUiState(
-    val steps: Int = 0,
-    val distanceKm: Double = 0.0,
-    val caloriesKcal: Double = 0.0,
-    val goal: Int = UserProfileRepository.Defaults.DAILY_STEP_GOAL,
-    val progress: Float = 0f
+    // NEW: These are now nullable to represent the initial loading state.
+    val steps: Int? = null,
+    val distanceKm: Double? = null,
+    val caloriesKcal: Double? = null,
+    // Goal can have a default, so it doesn't need to be nullable.
+    val goal: Int = UserProfileRepository.Defaults.DAILY_STEP_GOAL
 )
 
 class HomeViewModel(
@@ -51,15 +52,11 @@ class HomeViewModel(
     }
 
     private fun createUiState(stepData: StepData?, goal: Int): HomeUiState {
-        val steps = stepData?.steps ?: 0
-        val progress = if (goal > 0) (steps.toFloat() / goal.toFloat()).coerceIn(0f, 1f) else 0f
-
         return HomeUiState(
-            steps = steps,
-            distanceKm = stepData?.distanceKm ?: 0.0,
-            caloriesKcal = stepData?.caloriesKcal ?: 0.0,
-            goal = goal,
-            progress = progress
+            steps = stepData?.steps,
+            distanceKm = stepData?.distanceKm,
+            caloriesKcal = stepData?.caloriesKcal,
+            goal = goal
         )
     }
 

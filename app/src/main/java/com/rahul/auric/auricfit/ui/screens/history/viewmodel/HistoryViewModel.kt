@@ -6,37 +6,25 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.rahul.auric.auricfit.db.StepData
 import com.rahul.auric.auricfit.sensor.StepDataRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
+import com.rahul.auric.auricfit.util.DateUtils
+import kotlinx.coroutines.flow.*
 
-// NEW: Enum to represent the selected time period. This is safer than using integers or strings.
 enum class TimePeriod {
-    Daily, // Represents the weekly view of daily bars
+    Daily,
     Weekly,
     Monthly
 }
 
 class HistoryViewModel(private val repository: StepDataRepository) : ViewModel() {
 
-    // --- State for the UI ---
-
-    // NEW: State to track the selected time period. Defaults to Daily (which shows weekly data).
     private val _timePeriod = MutableStateFlow(TimePeriod.Daily)
     val timePeriod = _timePeriod.asStateFlow()
 
-    // NEW: This is a powerful feature of Flow. `flatMapLatest` listens to the _timePeriod flow.
-    // Whenever the time period changes, it cancels the old database query and starts a new one.
-    // This automatically switches our data source between daily, weekly, and monthly.
     val historyData: StateFlow<List<StepData>> = _timePeriod.flatMapLatest { period ->
-        // The 'when' expression now correctly returns a Flow<List<StepData>> in all cases
         when (period) {
             TimePeriod.Daily -> repository.getWeeklyStepData()
-            TimePeriod.Weekly -> repository.getMonthlyStepData()
-            TimePeriod.Monthly -> repository.getAllStepData() // Typo fixed
+            TimePeriod.Weekly -> aggregateToWeekly(repository.getMonthlyStepData())
+            TimePeriod.Monthly -> aggregateToMonthly(repository.getAllStepData())
         }
     }.stateIn(
         scope = viewModelScope,
@@ -44,25 +32,56 @@ class HistoryViewModel(private val repository: StepDataRepository) : ViewModel()
         initialValue = emptyList()
     )
 
-    // (For now, Weekly and Monthly will show the same as Daily until we add aggregation logic)
-
     private val _isShowingSteps = MutableStateFlow(true)
     val isShowingSteps = _isShowingSteps.asStateFlow()
-
-
-    // --- Events from the UI ---
 
     fun onDataTypeChange(showSteps: Boolean) {
         _isShowingSteps.value = showSteps
     }
 
-    // NEW: Function called when the user clicks "Daily", "Weekly", or "Monthly".
     fun onTimePeriodChange(period: TimePeriod) {
         _timePeriod.value = period
     }
 
+    suspend fun getAllDataForExport(): List<StepData> {
+        return repository.getAllStepData().first()
+    }
 
-    // --- Factory ---
+    // --- NEW: Aggregation Logic ---
+
+    private fun aggregateToWeekly(dailyDataFlow: Flow<List<StepData>>): Flow<List<StepData>> {
+        return dailyDataFlow.map { dailyList ->
+            // Group by week identifier (e.g., "2024-21")
+            dailyList.groupBy { DateUtils.getWeekIdentifier(it.date) }
+                .map { (_, group) ->
+                    // For each group, create a single StepData object that sums up the values
+                    StepData(
+                        date = group.first().date, // Use the date of the first day of the week as the identifier
+                        steps = group.sumOf { it.steps },
+                        distanceKm = group.sumOf { it.distanceKm },
+                        caloriesKcal = group.sumOf { it.caloriesKcal },
+                        initialSensorValue = 0 // Not relevant for aggregated data
+                    )
+                }
+        }
+    }
+
+    private fun aggregateToMonthly(dailyDataFlow: Flow<List<StepData>>): Flow<List<StepData>> {
+        return dailyDataFlow.map { dailyList ->
+            // Group by month identifier (e.g., "2024-05")
+            dailyList.groupBy { DateUtils.getMonthIdentifier(it.date) }
+                .map { (_, group) ->
+                    StepData(
+                        date = group.first().date, // Use the date of the first day of the month
+                        steps = group.sumOf { it.steps },
+                        distanceKm = group.sumOf { it.distanceKm },
+                        caloriesKcal = group.sumOf { it.caloriesKcal },
+                        initialSensorValue = 0
+                    )
+                }
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     class Factory(private val repository: StepDataRepository) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -40,7 +39,8 @@ fun AppNavigation() {
 
     Scaffold(
         bottomBar = {
-            val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+            val currentRoute =
+                navController.currentBackStackEntryAsState().value?.destination?.route
             // Only show the bottom bar on the main screens.
             if (currentRoute in listOf(Routes.HOME, Routes.HISTORY, Routes.PROFILE)) {
                 BottomNavBar(navController = navController)
@@ -55,7 +55,8 @@ fun AppNavigation() {
             composable(Routes.SPLASH) {
                 SplashScreen(onSplashFinished = {
                     // This logic now runs safely after the 2-second delay.
-                    val isProfileSetupComplete = userProfile.strideLengthCm != UserProfileRepository.Defaults.STRIDE_LENGTH_CM
+                    val isProfileSetupComplete =
+                        userProfile.strideLengthCm != UserProfileRepository.Defaults.STRIDE_LENGTH_CM
                     val nextRoute = if (isProfileSetupComplete) Routes.HOME else Routes.PROFILE
                     navController.navigate(nextRoute) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
@@ -75,19 +76,38 @@ fun AppNavigation() {
             composable(Routes.HOME) {
                 // (This part remains the same)
                 PermissionHandler(onGranted = {
-                    val homeViewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory(Graph.userProfileRepository, Graph.stepDataRepository))
+                    val homeViewModel: HomeViewModel = viewModel(
+                        factory = HomeViewModel.Factory(
+                            Graph.userProfileRepository,
+                            Graph.stepDataRepository
+                        )
+                    )
                     val uiState by homeViewModel.uiState.collectAsState()
                     LaunchedEffect(Unit) { homeViewModel.startStepCounting() }
-                    HomeScreen(steps = uiState.steps, distanceKm = uiState.distanceKm, caloriesKcal = uiState.caloriesKcal, goal = uiState.goal)
+                    HomeScreen(
+                        steps = uiState.steps,
+                        distanceKm = uiState.distanceKm,
+                        caloriesKcal = uiState.caloriesKcal,
+                        goal = uiState.goal
+                    )
                 })
             }
             composable(Routes.HISTORY) {
-                // (This part remains the same)
-                val historyViewModel: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory(Graph.stepDataRepository))
+                val historyViewModel: HistoryViewModel = viewModel(
+                    factory = HistoryViewModel.Factory(Graph.stepDataRepository)
+                )
                 val historyData by historyViewModel.historyData.collectAsState()
                 val isShowingSteps by historyViewModel.isShowingSteps.collectAsState()
                 val timePeriod by historyViewModel.timePeriod.collectAsState()
-                HistoryScreen(historyData = historyData, isShowingSteps = isShowingSteps, onDataTypeChange = historyViewModel::onDataTypeChange, timePeriod = timePeriod, onTimePeriodChange = historyViewModel::onTimePeriodChange)
+
+                HistoryScreen(
+                    historyData = historyData,
+                    isShowingSteps = isShowingSteps,
+                    onDataTypeChange = historyViewModel::onDataTypeChange,
+                    timePeriod = timePeriod,
+                    onTimePeriodChange = historyViewModel::onTimePeriodChange,
+                    viewModel = historyViewModel // Ensure the viewModel is passed here
+                )
             }
         }
     }
