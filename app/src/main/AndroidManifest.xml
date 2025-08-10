@@ -4,6 +4,7 @@
 
     <!-- Required permission to read the step counter sensor on Android 10 (API 29) and above -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- This tells the Google Play Store that the app uses this hardware,
          but it's not strictly required, so devices without a step sensor can still install it. -->
@@ -19,6 +20,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AuricFit">
+
+        <receiver
+            android:name=".sensor.RebootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

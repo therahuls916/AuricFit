@@ -1,0 +1,10 @@
+<!-- File: res/drawable/ic_auricfit_logo_foreground.xml -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F7B733"
+        android:pathData="M54,14 L94,82 L14,82 Z"/>
+</vector>

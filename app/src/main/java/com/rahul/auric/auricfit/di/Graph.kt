@@ -15,8 +15,8 @@ import kotlinx.coroutines.SupervisorJob
  */
 object Graph {
     // Database instance
-    private lateinit var database: AppDatabase
-
+    lateinit var database: AppDatabase
+        private set
     // An application-level coroutine scope for background tasks that should not be cancelled.
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
