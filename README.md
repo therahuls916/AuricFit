@@ -6,7 +6,7 @@
 | **Developer Name**             | Rahul Salunke                      |
 | **Project**        | AuricFit - Fitness Tracker         |
 | **Domain**           | Android Development                |
-| **Guidance By**    | AI Assistant (step-by-step development) |
+| **Guidance By**    | Neela Santhosh Kumar |
 
 ---
 ### 📸 Screenshots
